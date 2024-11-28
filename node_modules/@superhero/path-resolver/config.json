@@ -1,0 +1,6 @@
+{
+  "locator":
+  {
+    "@superhero/path-resolver": true
+  }
+}
