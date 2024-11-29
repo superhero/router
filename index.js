@@ -73,7 +73,7 @@ export default class Router extends Map
       throw error
     }
 
-    route = deepclone.clone(route)
+    route = deepclone(route)
     route.middleware = this.#normalizeMiddleware(route.middleware)
     const regexp = this.#composeRouteRegExp(route.criteria, route.separators ?? separators)
     super.set(id, { route, regexp })
@@ -101,8 +101,8 @@ export default class Router extends Map
           if(match)
           {
             const param = match.groups ?? {}
-            deepassign.assign(event, { param })
-            deepassign.assign(meta,  { route }, { route:{ trace:[id] } })
+            deepassign(event, { param })
+            deepassign(meta,  { route }, { route:{ trace:[id] } })
 
             if('dispatcher' in route)
             {
