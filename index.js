@@ -115,7 +115,7 @@ export default class Router extends Map
       }
       catch(reason)
       {
-        const error = new Error(`Dispatch failed for ${event.criteria}`)
+        const error = new Error(`Failed to dispatch ${event.criteria}`)
         error.code  = 'E_ROUTER_DISPATCH_FAILED'
         error.cause = reason
         reject(error)
