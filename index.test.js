@@ -291,7 +291,7 @@ suite('@superhero/router', () =>
   {
     assert.throws(
       () => router.setRoutes([]), 
-      { code: 'E_ROUTER_INVALID_ROUTES_TYPE' },
+      { code: 'E_ROUTER_INVALID_ROUTE' },
       'Should throw due to invalid routes type')
   })
 
@@ -301,7 +301,7 @@ suite('@superhero/router', () =>
     router.set('testRoute', route)
     assert.throws(
       () => router.set('testRoute', route), 
-      { code: 'E_ROUTER_INVALID_ROUTE_ID' },
+      { code: 'E_ROUTER_INVALID_ROUTE' },
       'Should throw due to duplicate route id')
   })
 
@@ -317,7 +317,7 @@ suite('@superhero/router', () =>
   {
     assert.throws(
       () => router.set('invalidRoute', { dispatcher: 'bazqux' }), 
-      { code: 'E_ROUTER_INVALID_ROUTE_PATH' }, 
+      { code: 'E_ROUTER_INVALID_ROUTE' }, 
       'Should throw due to missing route criteria')
   })
 
@@ -329,7 +329,7 @@ suite('@superhero/router', () =>
 
     await assert.rejects(
       router.dispatch(routeEvent, routeMeta), 
-      { code: 'E_ROUTER_DISPATCH_EVENT_FAILED' },
+      { code: 'E_ROUTER_DISPATCH_FAILED' },
       'Should reject due to no matching route found')
   })
 
@@ -346,7 +346,7 @@ suite('@superhero/router', () =>
     const meta = {}
     await assert.rejects(
       router.dispatch({ criteria: '/test/123' }, meta),
-      (error) => 'E_ROUTER_DISPATCH_EVENT_FAILED' === error.code 
+      (error) => 'E_ROUTER_DISPATCH_FAILED' === error.code 
               && 'test error' === error.cause.message,
       'Error should have been caught')
   })

@@ -139,8 +139,7 @@ await router.dispatch({ criteria: '/example/123' }, meta).catch((err) => {
 Errors are handled using custom error codes. Examples:
 
 - `E_ROUTER_INVALID_ROUTE`: Invalid route configuration.
-- `E_ROUTER_DISPATCH_EVENT_FAILED`: Event dispatch failure.
-- `E_ROUTER_INVALID_ROUTES_TYPE`: Routes map must be an object.
+- `E_ROUTER_DISPATCH_FAILED`: Dispatch event failure.
 
 You can also handle dispatcher-specific errors with `onError`.
 

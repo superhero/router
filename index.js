@@ -22,7 +22,7 @@ export default class Router extends Map
     if(routesType !== '[object Object]')
     {
       const error = new TypeError('Routes must be type [object Object]')
-      error.code  = 'E_ROUTER_INVALID_ROUTES_TYPE'
+      error.code  = 'E_ROUTER_INVALID_ROUTE'
       error.cause = new TypeError(`Invalid routes type "${routesType}"`)
       throw error
     }
@@ -49,7 +49,7 @@ export default class Router extends Map
     if(this.has(id))
     {
       const error = new Error(`Route "${id}" already exists`)
-      error.code = 'E_ROUTER_INVALID_ROUTE_ID'
+      error.code = 'E_ROUTER_INVALID_ROUTE'
       throw error
     }
 
@@ -68,7 +68,7 @@ export default class Router extends Map
     if(routeCriteriaType !== '[object String]')
     {
       const error = new TypeError(`Expecting route "${id}" to have a "criteria" property of type [object String]`)
-      error.code  = 'E_ROUTER_INVALID_ROUTE_PATH'
+      error.code  = 'E_ROUTER_INVALID_ROUTE'
       error.cause = new TypeError(`Invalid route criteria type "${routeCriteriaType}"`)
       throw error
     }
@@ -116,7 +116,7 @@ export default class Router extends Map
       catch(reason)
       {
         const error = new Error(`Dispatch event failed for ${event.criteria}`)
-        error.code  = 'E_ROUTER_DISPATCH_EVENT_FAILED'
+        error.code  = 'E_ROUTER_DISPATCH_FAILED'
         error.cause = reason
         reject(error)
       }
