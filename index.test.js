@@ -1,16 +1,16 @@
+import Locate from '@superhero/locator'
+import Router from '@superhero/router'
+import assert from 'node:assert'
 import { suite, test, beforeEach } from 'node:test'
-import { Locate } from '@superhero/locator'
-import Router     from '@superhero/router'
-import assert     from 'node:assert'
 
 suite('@superhero/router', () => 
 {
-  let router, locator
+  let router, locate
 
   beforeEach(() => 
   {
-    locator = new Locate()
-    router  = new Router(locator)
+    locate = new Locate()
+    router = new Router(locate)
   })
 
   test('Can set valid routes', () => 
@@ -37,7 +37,7 @@ suite('@superhero/router', () =>
     })
 
     let dispatched = false
-    locator.set('testDispatcher', 
+    locate.set('testDispatcher', 
     {
       dispatch: (event) => 
       {
@@ -59,7 +59,7 @@ suite('@superhero/router', () =>
 
   test('Can manage error in the dispatcher', async (sub) => 
   {
-    locator.set('testDispatcher', 
+    locate.set('testDispatcher', 
     {
       dispatch: () => { throw new Error('test error') },
       onError : (reason, _, meta) => meta.error = reason
@@ -80,7 +80,7 @@ suite('@superhero/router', () =>
   {
     test('Can dispatch chain of middlewares defined in a single route', async () => 
     {
-      locator.set('testDispatcher', 
+      locate.set('testDispatcher', 
       {
         dispatch: (_, meta) => 
         {
@@ -92,7 +92,7 @@ suite('@superhero/router', () =>
         }
       })
       
-      locator.set('testMiddlewareUpstream',
+      locate.set('testMiddlewareUpstream',
       {
         dispatch: (_, meta) => 
         {
@@ -104,7 +104,7 @@ suite('@superhero/router', () =>
         }
       })
       
-      locator.set('testMiddlewareDownstream',
+      locate.set('testMiddlewareDownstream',
       {
         dispatch: async (_, meta) => 
         {
@@ -138,19 +138,19 @@ suite('@superhero/router', () =>
 
     test('Can dispatch the chain defined in different routes', async () => 
     {
-      locator.set('middleware1',
+      locate.set('middleware1',
         { dispatch: (_, meta) => meta.foo = 1 })
 
-      locator.set('middleware2',
+      locate.set('middleware2',
         { dispatch: (_, meta) => meta.bar = 2 })
 
-      locator.set('middleware3',
+      locate.set('middleware3',
         { dispatch: (_, meta) => meta.baz = 3 })
 
-      locator.set('middleware4',
+      locate.set('middleware4',
         { dispatch: (_, meta) => meta.qux = 4 })
 
-      locator.set('dispatcher1',
+      locate.set('dispatcher1',
         { dispatch: (_, meta) => meta.qux++ })
 
       router.set('middleware1route', 
@@ -199,7 +199,7 @@ suite('@superhero/router', () =>
   {
     sub.beforeEach(() =>
     {
-      locator.set('testDispatcher', 
+      locate.set('testDispatcher', 
       {
         dispatch: (event, meta) => meta.dispatched = event.param.id
       })
@@ -335,7 +335,7 @@ suite('@superhero/router', () =>
 
   test('Rejects when dispatching a dispatcher that throws', async (sub) => 
   {
-    locator.set('testDispatcher', { dispatch: () => { throw new Error('test error') }})
+    locate.set('testDispatcher', { dispatch: () => { throw new Error('test error') }})
 
     router.set('testRoute', 
     {
