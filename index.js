@@ -3,12 +3,10 @@ import deepclone  from '@superhero/deep/clone'
 
 export default class Router extends Map
 {
-  #locator
-
   constructor(locator)
   {
     super()
-    this.#locator = locator
+    this.locate = locator
   }
 
   /**
@@ -184,7 +182,7 @@ export default class Router extends Map
   {
     if(false === meta.abortion.signal.aborted)
     {
-      dispatcher = this.#locator(dispatcher)
+      dispatcher = this.locate(dispatcher)
 
       try
       {

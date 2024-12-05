@@ -1,6 +1,6 @@
 {
   "name": "@superhero/router",
-  "version": "4.1.0",
+  "version": "4.1.1",
   "description": "A flexible router that can be used in different contexts.",
   "main": "index.js",
   "license": "MIT",
