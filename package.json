@@ -1,6 +1,6 @@
 {
   "name": "@superhero/router",
-  "version": "4.1.5",
+  "version": "4.1.6",
   "description": "A flexible router that can be used in different contexts.",
   "main": "index.js",
   "license": "MIT",
@@ -12,7 +12,7 @@
     "@superhero/deep": "^4.3.0"
   },
   "devDependencies": {
-    "@superhero/locator": "^4.4.0"
+    "@superhero/locator": "^4.4.1"
   },
   "scripts": {
     "test": "node --trace-warnings --test --experimental-test-coverage"
