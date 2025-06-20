@@ -61,25 +61,28 @@ export default class Router extends Map
       throw error
     }
 
-    const routeCriteriaType = Object.prototype.toString.call(route.criteria)
+    const routeConditionType = Object.prototype.toString.call(route.condition)
 
-    if(routeCriteriaType !== '[object String]')
+    if(routeConditionType !== '[object String]')
     {
-      const error = new TypeError(`Expecting route "${id}" to have a "criteria" property of type [object String]`)
+      const error = new TypeError(`Expecting route "${id}" to have a "condition" property of type [object String]`)
       error.code  = 'E_ROUTER_INVALID_ROUTE'
-      error.cause = new TypeError(`Invalid route criteria type "${routeCriteriaType}"`)
+      error.cause = new TypeError(`Invalid route condition type "${routeConditionType}"`)
       throw error
     }
 
     route = deepclone(route)
-    route.middleware = this.#normalizeMiddleware(route.middleware)
-    const regexp = this.#composeRouteRegExp(route.criteria, route.separators ?? separators)
+    route.conditions  = this.#normalizeList(route.conditions).map(this.#normalizeCondition.bind(this))
+    route.middlewares = this.#normalizeMiddlewares(route)
+    route.dispatcher  = route.dispatcher && this.#normalizeDispatcher(route.dispatcher)
+
+    const regexp = this.#composeRouteRegExp(route.condition, route.separators ?? route.separator ?? separators)
     super.set(id, { route, regexp })
   }
 
   /**
    * @param {Object} event The event to dispatch.
-   * @param {string} event.criteria The event criteria to match against routes.
+   * @param {string} event.condition The event condition to match against routes.
    * @param {Object} [meta] Optional contextual space.
    * 
    * @returns {Promise} A promise that resolves when the event has been dispatched.
@@ -94,9 +97,9 @@ export default class Router extends Map
       {
         for(const [id, { route, regexp }] of this.entries())
         {
-          const match = event.criteria.match(regexp)
+          const match = event.condition.match(regexp)
     
-          if(match)
+          if(match && route.conditions.every(condition => condition.isValid(event, meta)))
           {
             const param = match.groups ?? {}
             deepassign(event, { param })
@@ -136,9 +139,7 @@ export default class Router extends Map
 
     const
       chain       = { index:0 },
-      dispatchers = meta.route.dispatcher
-                  ? meta.route.middleware.concat(meta.route.dispatcher)
-                  : meta.route.middleware,
+      dispatchers = meta.route.middlewares.concat(meta.route.dispatcher),
       iterator    = dispatchers[Symbol.iterator](),
       next        = this.#dispatchChainNext.bind(this, event, meta)
 
@@ -182,8 +183,6 @@ export default class Router extends Map
   {
     if(false === meta.abortion.signal.aborted)
     {
-      dispatcher = this.locate(dispatcher)
-
       try
       {
         meta.chain.index++
@@ -221,7 +220,7 @@ export default class Router extends Map
       meta.route = {}
     }
 
-    meta.route.middleware = this.#normalizeMiddleware(meta.route.middleware)
+    meta.route.middlewares = this.#normalizeMiddlewares(meta.route)
 
     if('undefined' === typeof meta.abortion)
     {
@@ -249,34 +248,92 @@ export default class Router extends Map
     }
   }
 
-  #normalizeMiddleware(middleware)
+  #normalizeMiddlewares(context)
   {
-    const middlewareType = Object.prototype.toString.call(middleware)
+    return this.#normalizeList(context.middlewares ?? context.middleware).map(this.#normalizeDispatcher.bind(this))
+  }
 
-    switch(middlewareType)
+  #normalizeList(item)
+  {
+    const itemType = Object.prototype.toString.call(item)
+
+    switch(itemType)
     {
-      case '[object Array]': 
+      case '[object Undefined]' : return []
+      case '[object String]'    : return this.#normalizeList([ item ])
+      case '[object Array]'     :
       {
-        if(middleware.some((dispatcher) => 'string' !== typeof dispatcher))
+        if(item.some((dispatcher) => 'string' !== typeof dispatcher))
         {
-          const error = new TypeError(`Expected middleware property to be an array of strings`)
-          error.code  = 'E_ROUTER_INVALID_MIDDLEWARE_TYPE'
-          error.cause = new TypeError(`Every middleware dispatcher in the route must be a string`)
+          const error = new TypeError(`Expected item property to be an array of strings`)
+          error.code  = 'E_ROUTER_INVALID_ITEM_TYPE'
+          error.cause = `Every item dispatcher in the route must be a string`
           throw error
         }
 
-        return middleware
+        return item
       }
-      case '[object Undefined]' : return this.#normalizeMiddleware([])
-      case '[object String]'    : return this.#normalizeMiddleware([ middleware ])
-      case '[object Object]'    : return Object.values(middleware).filter(Boolean)
       default:
       {
-        const error = new TypeError(`Expected middleware property to be an array of strings`)
-        error.code  = 'E_ROUTER_INVALID_MIDDLEWARE_TYPE'
-        error.cause = new TypeError(`Invalid middleware type "${middlewareType}"`)
+        const error = new TypeError(`Expected item property to be an array of strings`)
+        error.code  = 'E_ROUTER_NORMALIZE_LIST'
+        error.cause = `Invalid item type "${itemType}"`
         throw error
       }
+    }
+  }
+
+  #normalizeDispatcher(dispatcher)
+  {
+    let dispatcherName
+
+    if('string' === typeof dispatcher)
+    {
+      dispatcherName = dispatcher
+      dispatcher = this.locate(dispatcher)
+    }
+
+    if('object' !== typeof dispatcher)
+    {
+      const error = new TypeError(`Expected dispatcher to be an object`)
+      error.code  = 'E_ROUTER_NORMALIZE_DISPATCHER_INVALID_TYPE'
+      error.cause = `Invalid dispatcher type "${Object.prototype.toString.call(dispatcher)}"`
+      throw error
+    }
+
+    if('function' !== typeof dispatcher.dispatch)
+    {
+      const error = new TypeError(`Contract expectation failed`)
+      error.code  = 'E_ROUTER_NORMALIZE_DISPATCHER_INVALID_CONTRACT'
+      error.cause = `Method "dispatch" on dispatcher${dispatcherName ? ` "${dispatcherName}"` : ''} is not a function`
+      throw error
+    }
+  }
+
+  #normalizeCondition(condition)
+  {
+    let conditionName
+
+    if('string' === typeof condition)
+    {
+      conditionName = condition
+      condition = this.locate(condition)
+    }
+
+    if('object' !== typeof condition)
+    {
+      const error = new TypeError(`Expected condition to be an object`)
+      error.code  = 'E_ROUTER_NORMALIZE_CONDITION_INVALID_TYPE'
+      error.cause = `Invalid condition type "${Object.prototype.toString.call(condition)}"`
+      throw error
+    }
+
+    if('function' !== typeof condition.isValid)
+    {
+      const error = new TypeError(`Contract expectation failed`)
+      error.code  = 'E_ROUTER_NORMALIZE_CONDITION_INVALID_CONTRACT'
+      error.cause = `Method "isValid" on condition${conditionName ? ` "${conditionName}"` : ''} is not a function`
+      throw error
     }
   }
 
