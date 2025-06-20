@@ -21,7 +21,7 @@ export default class Router extends Map
     {
       const error = new TypeError('Routes must be type [object Object]')
       error.code  = 'E_ROUTER_INVALID_ROUTE'
-      error.cause = new TypeError(`Invalid routes type "${routesType}"`)
+      error.cause = `Invalid routes type "${routesType}"`
       throw error
     }
 
@@ -57,7 +57,7 @@ export default class Router extends Map
     {
       const error = new TypeError(`Expecting route "${id}" to be type [object Object]`)
       error.code  = 'E_ROUTER_INVALID_ROUTE'
-      error.cause = new TypeError(`Invalid route type "${routeType}"`)
+      error.cause = `Invalid route type "${routeType}"`
       throw error
     }
 
@@ -67,12 +67,12 @@ export default class Router extends Map
     {
       const error = new TypeError(`Expecting route "${id}" to have a "condition" property of type [object String]`)
       error.code  = 'E_ROUTER_INVALID_ROUTE'
-      error.cause = new TypeError(`Invalid route condition type "${routeConditionType}"`)
+      error.cause = `Invalid route condition type "${routeConditionType}"`
       throw error
     }
 
     route = deepclone(route)
-    route.conditions  = this.#normalizeList(route.conditions).map(this.#normalizeCondition.bind(this))
+    route.conditions  = this.#normalizeList(route.conditions).map(this.#normalizeConditionService.bind(this))
     route.middlewares = this.#normalizeMiddlewares(route)
     route.dispatcher  = route.dispatcher && this.#normalizeDispatcher(route.dispatcher)
 
@@ -105,7 +105,7 @@ export default class Router extends Map
             deepassign(event, { param })
             deepassign(meta,  { route }, { route:{ trace:[id] } })
 
-            if('dispatcher' in route)
+            if(route.dispatcher)
             {
               break
             }
@@ -116,7 +116,7 @@ export default class Router extends Map
       }
       catch(reason)
       {
-        const error = new Error(`Failed to dispatch ${event.criteria}`)
+        const error = new Error(`Failed to dispatch ${event.condition}`)
         error.code  = 'E_ROUTER_DISPATCH_FAILED'
         error.cause = reason
         reject(error)
@@ -128,11 +128,11 @@ export default class Router extends Map
   {
     if(false === !!meta.route.dispatcher)
     {
-      const error = new Error(`No dispatcher found for ${event.criteria}`)
+      const error = new Error(`No dispatcher found for ${event.condition}`)
       error.code  = 'E_ROUTER_DISPATCH_NO_DISPATCHER'
       error.cause = meta.route.trace
                   ? `No dispatcher found in any of the matched routers: ${meta.route.trace.join(' → ')}`
-                  : `No router matched the criteria`
+                  : `No router matched the condition`
 
       throw error
     }
@@ -243,7 +243,7 @@ export default class Router extends Map
       const metaAbortionType = Object.prototype.toString.call(meta.abortion)
       const error = new TypeError('Expecting meta.abortion to be an instance of AbortController')
       error.code  = 'E_ROUTER_INVALID_META_ABORTION_TYPE'
-      error.cause = new TypeError(`Invalid meta.abortion type "${metaAbortionType}"`)
+      error.cause = `Invalid meta.abortion type "${metaAbortionType}"`
       throw error
     }
   }
@@ -308,9 +308,11 @@ export default class Router extends Map
       error.cause = `Method "dispatch" on dispatcher${dispatcherName ? ` "${dispatcherName}"` : ''} is not a function`
       throw error
     }
+
+    return dispatcher
   }
 
-  #normalizeCondition(condition)
+  #normalizeConditionService(condition)
   {
     let conditionName
 
@@ -335,14 +337,16 @@ export default class Router extends Map
       error.cause = `Method "isValid" on condition${conditionName ? ` "${conditionName}"` : ''} is not a function`
       throw error
     }
+
+    return condition
   }
 
-  #composeRouteRegExp(criteria, separators)
+  #composeRouteRegExp(condition, separators)
   {
     separators = separators ?? '/'
 
     const
-      segments        = criteria.split(new RegExp(`[${separators}]+`)),
+      segments        = condition.split(new RegExp(`[${separators}]+`)),
       mappedSegments  = segments.map(this.#mapRouteRegExpArgs.bind(this, separators)),
       regexpString    = mappedSegments.join(`[${separators}]+`),
       regexp          = new RegExp(`^${regexpString}$`)

@@ -3,22 +3,29 @@ import Router from '@superhero/router'
 import assert from 'node:assert'
 import { suite, test, beforeEach } from 'node:test'
 
-suite('@superhero/router', () => 
+suite.only('@superhero/router', () => 
 {
-  let router, locate
+  let 
+    router,
+    locate = new Locate()
 
-  beforeEach(() => 
+  beforeEach(async () => 
   {
+    await locate.destroy()
+
     locate = new Locate()
     router = new Router(locate)
+
+    locate.set('foo', { dispatch: () => {  } })
+    locate.set('bar', { dispatch: () => {  } })
   })
 
   test('Can set valid routes', () => 
   {
     const routesMap = 
     {
-      route1: { criteria: '/test/123', dispatcher: 'foo' },
-      route2: { criteria: '/sample/*', dispatcher: 'bar' },
+      route1: { condition: '/test/123', dispatcher: 'foo' },
+      route2: { condition: '/sample/*', dispatcher: 'bar' },
     }
 
     router.setRoutes(routesMap)
@@ -30,13 +37,8 @@ suite('@superhero/router', () =>
 
   test('Can dispatch events using a matching route', async () => 
   {
-    router.set('testRoute', 
-    {
-      criteria   : '/test/:id',
-      dispatcher : 'testDispatcher',
-    })
-
     let dispatched = false
+
     locate.set('testDispatcher', 
     {
       dispatch: (event) => 
@@ -46,34 +48,53 @@ suite('@superhero/router', () =>
       }
     })
 
-    await router.dispatch({ criteria: '/test/123' })
+    router.set('testRoute', 
+    {
+      condition  : '/test/:id',
+      dispatcher : 'testDispatcher',
+    })
+
+    await router.dispatch({ condition: '/test/123' })
     assert(dispatched, 'Event was not dispatched')
   })
 
   test('Can set a valid route', () => 
   {
-    const route = { criteria: '/test/123', dispatcher: 'foobar' }
+    const route = { condition: '/test/123', dispatcher: 'foo' }
     router.set('testRoute', route)
     assert.ok(router.has('testRoute'), 'Route was set')
   })
 
   test('Can manage error in the dispatcher', async (sub) => 
   {
-    locate.set('testDispatcher', 
+    locate.set('errorDispatcher1', 
+    {
+      dispatch: () => { throw new Error('test error') }
+    })
+
+    router.set('errorRoute1', 
+    {
+      condition  : '/test/123',
+      dispatcher : 'errorDispatcher1',
+    })
+
+    await assert.rejects(router.dispatch({ condition: '/test/123' }))
+
+    locate.set('errorDispatcher2', 
     {
       dispatch: () => { throw new Error('test error') },
       onError : (reason, _, meta) => meta.error = reason
     })
 
-    router.set('testRoute', 
+    router.set('errorRoute2', 
     {
-      criteria   : '/test/123',
-      dispatcher : 'testDispatcher',
+      condition  : '/test/234',
+      dispatcher : 'errorDispatcher2',
     })
 
     const meta = {}
-    await assert.doesNotReject(router.dispatch({ criteria: '/test/123' }, meta))
-    assert.strictEqual(meta.error.message, 'test error', 'Error should have benn caught')
+    await assert.doesNotReject(router.dispatch({ condition: '/test/234' }, meta))
+    assert.strictEqual(meta.error.message, 'test error', 'Error should have been caught')
   })
 
   suite('Can dispatch events using a dispatcher chain of middlewares', () =>
@@ -125,11 +146,11 @@ suite('@superhero/router', () =>
       router.set('testRoute', 
       {
         middleware : ['testMiddlewareDownstream', 'testMiddlewareUpstream'],
-        criteria   : '/test/123',
+        condition  : '/test/123',
         dispatcher : 'testDispatcher',
       })
 
-      const meta = await router.dispatch({ criteria: '/test/123' })
+      const meta = await router.dispatch({ condition: '/test/123' })
       assert.equal(meta.dispatcherVar,  'foo')
       assert.equal(meta.upstreamVar,    'bar')
       assert.equal(meta.downstreamVar,  'baz')
@@ -155,26 +176,26 @@ suite('@superhero/router', () =>
 
       router.set('middleware1route', 
         { middleware : 'middleware1',
-          criteria   : '/*/*' })
+          condition  : '/*/*' })
       
       router.set('middleware2route', 
         { middleware : 'middleware2',
-          criteria   : '/test/*' })
+          condition  : '/test/*' })
 
       router.set('middleware3route', 
         { middleware : 'middleware3',
-          criteria   : '/test/:num' })
+          condition  : '/test/:num' })
 
       router.set('middleware4route', 
         { middleware : 'middleware4',
-          criteria   : '/:tier/:id' })
+          condition  : '/:tier/:id' })
 
       router.set('dispatcher1route', 
         { dispatcher : 'dispatcher1',
-          criteria   : '/test/123' })
+          condition  : '/test/123' })
 
       const
-        event = { criteria: '/test/123' },
+        event = { condition: '/test/123' },
         meta  = await router.dispatch(event)
 
       assert.equal(meta.foo, 1, 'Middleware 1 should set foo')
@@ -206,7 +227,7 @@ suite('@superhero/router', () =>
   
       router.set('testRoute', 
       {
-        criteria   : '/test/:id',
+        condition  : '/test/:id',
         dispatcher : 'testDispatcher',
       })
     })
@@ -217,7 +238,7 @@ suite('@superhero/router', () =>
       fooMeta.abortion = new AbortController()
       fooMeta.abortion.abort('Aborted intentionally')
   
-      await assert.doesNotReject(router.dispatch({ criteria: '/test/foo' }, fooMeta))
+      await assert.doesNotReject(router.dispatch({ condition: '/test/foo' }, fooMeta))
       assert.strictEqual(fooMeta.abortion.signal.aborted, true)
       assert.strictEqual(fooMeta.abortion.signal.reason, 'Aborted intentionally')
       assert.strictEqual(fooMeta.dispatched, undefined)
@@ -228,7 +249,7 @@ suite('@superhero/router', () =>
       const barMeta = {}
       barMeta.abortion = new AbortController()
 
-      await assert.doesNotReject(router.dispatch({ criteria: '/test/bar' }, barMeta))
+      await assert.doesNotReject(router.dispatch({ condition: '/test/bar' }, barMeta))
       assert.strictEqual(barMeta.abortion.signal.aborted, false)
       assert.strictEqual(barMeta.abortion.signal.reason, undefined)
       assert.strictEqual(barMeta.dispatched, 'bar')
@@ -237,7 +258,7 @@ suite('@superhero/router', () =>
     await sub.test('Lazy loads meta.abortion when not set', async () =>
     {
       const bazMeta = {}
-      await assert.doesNotReject(router.dispatch({ criteria: '/test/baz' }, bazMeta))
+      await assert.doesNotReject(router.dispatch({ condition: '/test/baz' }, bazMeta))
     
       assert.strictEqual(bazMeta.abortion.signal.aborted, false)
       assert.strictEqual(bazMeta.abortion.signal.reason, undefined)
@@ -249,9 +270,9 @@ suite('@superhero/router', () =>
   {
     const routesMap = 
     {
-      route1: { criteria: '/test/123', dispatcher: 'foo' },
+      route1: { condition: '/test/123', dispatcher: 'foo' },
       route2: false,
-      route3: { criteria: '/sample/*', dispatcher: 'bar' },
+      route3: { condition: '/sample/*', dispatcher: 'bar' },
       route4: false,
     }
 
@@ -268,8 +289,8 @@ suite('@superhero/router', () =>
   {
     const routesMap = 
     {
-      route1: { criteria: '/test/123', dispatcher: 'foo' },
-      route2: { criteria: '/sample/*', dispatcher: 'bar' },
+      route1: { condition: '/test/123', dispatcher: 'foo' },
+      route2: { condition: '/sample/*', dispatcher: 'bar' },
     }
 
     router.setRoutes(routesMap)
@@ -297,7 +318,7 @@ suite('@superhero/router', () =>
 
   test('Throw an error when setting a duplicate route id', () => 
   {
-    const route = { criteria: '/test/123', dispatcher: 'barbaz' }
+    const route = { condition: '/test/123', dispatcher: 'bar' }
     router.set('testRoute', route)
     assert.throws(
       () => router.set('testRoute', route), 
@@ -313,18 +334,18 @@ suite('@superhero/router', () =>
       'Should throw due to invalid route type')
   })
 
-  test('Throw an error when setting a route with a missing criteria', () => 
+  test('Throw an error when setting a route with a missing condition', () => 
   {
     assert.throws(
       () => router.set('invalidRoute', { dispatcher: 'bazqux' }), 
       { code: 'E_ROUTER_INVALID_ROUTE' }, 
-      'Should throw due to missing route criteria')
+      'Should throw due to missing route condition')
   })
 
   test('Throw an error when dispatching an event with no matching routes', async () => 
   {
     const
-      routeEvent = { criteria: '/nonexistent' },
+      routeEvent = { condition: '/nonexistent' },
       routeMeta  = {}
 
     await assert.rejects(
@@ -339,13 +360,13 @@ suite('@superhero/router', () =>
 
     router.set('testRoute', 
     {
-      criteria   : '/test/123',
+      condition  : '/test/123',
       dispatcher : 'testDispatcher',
     })
 
     const meta = {}
     await assert.rejects(
-      router.dispatch({ criteria: '/test/123' }, meta),
+      router.dispatch({ condition: '/test/123' }, meta),
       (error) => 'E_ROUTER_DISPATCH_FAILED' === error.code 
               && 'test error' === error.cause.message,
       'Error should have been caught')

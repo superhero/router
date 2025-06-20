@@ -4,7 +4,7 @@ A flexible router (NodeJS module) for dispatching events based on defined routes
 
 ## Features
 
-- **Routing**: Define routes with criteria, middleware, and dispatchers.
+- **Routing**: Define routes with condition, middleware, and dispatchers.
 - **Middleware Chain**: Supports upstream, dispatcher, and downstream middleware.
 - **Event Dispatching**: Dispatch events with route matching and parameter extraction.
 - **Abort Signal Handling**: Gracefully abort dispatch chains using `AbortController`.
@@ -33,7 +33,7 @@ const router  = new Router(locator)
 
 // Define a route
 router.set('exampleRoute', {
-  criteria   : '/example/:id',
+  condition   : '/example/:id',
   dispatcher : 'exampleDispatcher',
 })
 
@@ -43,7 +43,7 @@ locator.set('exampleDispatcher', {
 })
 
 // Dispatch an event
-router.dispatch({ criteria: '/example/123' })
+router.dispatch({ condition: '/example/123' })
 ```
 
 ---
@@ -59,7 +59,7 @@ Creates a new router instance.
 Adds a single route.
 
 - `id`: Unique identifier for the route.
-- `route`: Object containing route configuration (`criteria`, `middleware`, `dispatcher`).
+- `route`: Object containing route configuration (`condition`, `middleware`, `dispatcher`).
 - `separators`: Optional custom separators for the route.
 
 ### `setRoutes(routesMap, separators?)`
@@ -71,7 +71,7 @@ Adds multiple routes.
 ### `dispatch(event, meta?)`
 Dispatches an event to the matching route.
 
-- `event`: Object with a `criteria` property to match against route criteria.
+- `event`: Object with a `condition` property to match against route condition.
 - `meta`: Optional metadata object for contextual dispatch.
 
 ---
@@ -80,7 +80,7 @@ Dispatches an event to the matching route.
 
 Each route can have the following properties:
 
-- `criteria` (String): The route's matching pattern (e.g., `/example/:id`).
+- `condition` (String): The route's matching pattern (e.g., `/example/:id`).
 - `middleware` (Array/String): Middleware chain for the route.
 - `dispatcher` (String): The final handler for the route.
 
@@ -92,7 +92,7 @@ Each route can have the following properties:
 // Middleware example
 locator.set('logMiddleware', {
   dispatch: (event, meta) => {
-    console.log('Logging event:', event.criteria)
+    console.log('Logging event:', event.condition)
     meta.timestamp = Date.now()
   },
 })
@@ -107,7 +107,7 @@ locator.set('exampleDispatcher', {
 
 // Route with middleware
 router.set('exampleRoute', {
-  criteria: '/example/:id',
+  condition: '/example/:id',
   middleware: ['logMiddleware'],
   dispatcher: 'exampleDispatcher',
 })
@@ -127,7 +127,7 @@ meta.abortion = new AbortController()
 meta.abortion.abort('Aborted intentionally')
 
 // Dispatching
-await router.dispatch({ criteria: '/example/123' }, meta).catch((err) => {
+await router.dispatch({ condition: '/example/123' }, meta).catch((err) => {
   console.error('Dispatch aborted:', err.message)
 })
 ```
@@ -163,18 +163,18 @@ Routes can define middleware chains that run sequentially before reaching the di
 
 ```javascript
 router.set('advancedRoute', {
-  criteria: '/advanced/:id',
+  condition: '/advanced/:id',
   middleware: ['authMiddleware', 'logMiddleware'],
   dispatcher: 'exampleDispatcher',
 })
 ```
 
 ### Dynamic Parameters
-Extract path parameters from route criteria.
+Extract path parameters from route condition.
 
 ```javascript
 router.set('dynamicRoute', {
-  criteria: '/user/:userId',
+  condition: '/user/:userId',
   dispatcher: 'userDispatcher',
 })
 
@@ -184,7 +184,7 @@ locator.set('userDispatcher', {
   },
 })
 
-router.dispatch({ criteria: '/user/42' })
+router.dispatch({ condition: '/user/42' })
 ```
 
 ---
@@ -222,7 +222,7 @@ npm test
   ✔ Throw an error if invalid routes map type is attempted to be set (0.613467ms)
   ✔ Throw an error when setting a duplicate route id (1.207039ms)
   ✔ Throw an error when an invalid route type set (0.21369ms)
-  ✔ Throw an error when setting a route with a missing criteria (0.151642ms)
+  ✔ Throw an error when setting a route with a missing condition (0.151642ms)
   ✔ Throw an error when dispatching an event with no matching routes (0.541608ms)
   ✔ Rejects when dispatching a dispatcher that throws (0.526658ms)
 ✔ @superhero/router (17.88466ms)
