@@ -1,6 +1,6 @@
 {
   "name": "@superhero/router",
-  "version": "4.7.3",
+  "version": "4.7.4",
   "description": "A flexible router that can be used in different contexts.",
   "main": "index.js",
   "license": "MIT",
@@ -13,12 +13,12 @@
     "test": "syntax-check; node --test-only --test --test-reporter=@superhero/audit/reporter --experimental-test-coverage"
   },
   "dependencies": {
-    "@superhero/deep": "4.7.3"
+    "@superhero/deep": "4.7.4"
   },
   "devDependencies": {
-    "@superhero/audit": "4.7.3",
+    "@superhero/audit": "4.7.4",
     "@superhero/syntax-check": "0.0.2",
-    "@superhero/locator": "4.7.3"
+    "@superhero/locator": "4.7.4"
   },
   "author": {
     "name": "Erik Landvall",
@@ -26,6 +26,6 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/superhero/router"
+    "url": "git+https://github.com/superhero/router.git"
   }
 }
