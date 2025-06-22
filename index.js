@@ -99,7 +99,7 @@ export default class Router extends Map
         {
           const match = event.condition.match(regexp)
     
-          if(match && route.conditions.every(condition => condition.isValid(event, meta)))
+          if(match && route.conditions.every(condition => condition.isValid(event, route)))
           {
             const param = match.groups ?? {}
             deepassign(event, { param })
@@ -186,6 +186,10 @@ export default class Router extends Map
       try
       {
         meta.chain.index++
+        if('string' === typeof dispatcher)
+        {
+          dispatcher = this.#normalizeDispatcher(dispatcher)
+        }
         await dispatcher.dispatch(event, meta)
       }
       catch(reason)
