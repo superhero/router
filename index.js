@@ -71,10 +71,11 @@ export default class Router extends Map
       throw error
     }
 
-    route = deepclone(route)
-    route.conditions  = this.#normalizeList(route.conditions).map(this.#normalizeConditionService.bind(this))
-    route.middlewares = this.#normalizeMiddlewares(route)
-    route.dispatcher  = route.dispatcher && this.#normalizeDispatcher(route.dispatcher)
+    const { dispatcher, middleware, middlewares, ...details } = route
+    route = deepclone(details)
+    route.conditions  = this.#normalizeConditions(route.conditions)
+    route.middlewares = this.#normalizeMiddlewares({ middleware, middlewares })
+    route.dispatcher  = dispatcher && this.#normalizeDispatcher(dispatcher)
 
     const regexp = this.#composeRouteRegExp(route.condition, route.separators ?? route.separator ?? separators)
     super.set(id, { route, regexp })
@@ -186,10 +187,7 @@ export default class Router extends Map
       try
       {
         meta.chain.index++
-        if('string' === typeof dispatcher)
-        {
-          dispatcher = this.#normalizeDispatcher(dispatcher)
-        }
+        dispatcher = this.#normalizeDispatcher(dispatcher)
         await dispatcher.dispatch(event, meta)
       }
       catch(reason)
@@ -252,9 +250,10 @@ export default class Router extends Map
     }
   }
 
-  #normalizeMiddlewares(context)
+  #normalizeMiddlewares(route)
   {
-    return this.#normalizeList(context.middlewares ?? context.middleware).map(this.#normalizeDispatcher.bind(this))
+    const middlewares = [ route.middlewares, route.middleware ].flat().filter(Boolean)
+    return middlewares.map(middleware => this.#normalizeDispatcher(middleware))
   }
 
   #normalizeList(item)
@@ -265,18 +264,7 @@ export default class Router extends Map
     {
       case '[object Undefined]' : return []
       case '[object String]'    : return this.#normalizeList([ item ])
-      case '[object Array]'     :
-      {
-        if(item.some((dispatcher) => 'string' !== typeof dispatcher))
-        {
-          const error = new TypeError(`Expected item property to be an array of strings`)
-          error.code  = 'E_ROUTER_INVALID_ITEM_TYPE'
-          error.cause = `Every item dispatcher in the route must be a string`
-          throw error
-        }
-
-        return item
-      }
+      case '[object Array]'     : return item.flat()
       default:
       {
         const error = new TypeError(`Expected item property to be an array of strings`)
@@ -289,11 +277,11 @@ export default class Router extends Map
 
   #normalizeDispatcher(dispatcher)
   {
-    let dispatcherName
+    let dispatcherName = ''
 
     if('string' === typeof dispatcher)
     {
-      dispatcherName = dispatcher
+      dispatcherName = ` "${dispatcher}"`
       dispatcher = this.locate(dispatcher)
     }
 
@@ -301,7 +289,7 @@ export default class Router extends Map
     {
       const error = new TypeError(`Expected dispatcher to be an object`)
       error.code  = 'E_ROUTER_NORMALIZE_DISPATCHER_INVALID_TYPE'
-      error.cause = `Invalid dispatcher type "${Object.prototype.toString.call(dispatcher)}"`
+      error.cause = `Invalid dispatcher${dispatcherName} type "${Object.prototype.toString.call(dispatcher)}"`
       throw error
     }
 
@@ -309,11 +297,26 @@ export default class Router extends Map
     {
       const error = new TypeError(`Contract expectation failed`)
       error.code  = 'E_ROUTER_NORMALIZE_DISPATCHER_INVALID_CONTRACT'
-      error.cause = `Method "dispatch" on dispatcher${dispatcherName ? ` "${dispatcherName}"` : ''} is not a function`
+      error.cause = `Method "dispatch" on dispatcher${dispatcherName} is not a function`
       throw error
     }
 
     return dispatcher
+  }
+
+  #normalizeConditions(conditions)
+  {
+    conditions = this.#normalizeList(conditions)
+
+    if(conditions.some(condition => 'string' !== typeof condition))
+    {
+      const error = new TypeError(`Expected conditions to be an array of strings`)
+      error.code  = 'E_ROUTER_INVALID_ITEM_TYPE'
+      error.cause = `Every item in the conditions must be a string`
+      throw error
+    }
+
+    return conditions.map(condition => this.#normalizeConditionService(condition))
   }
 
   #normalizeConditionService(condition)
