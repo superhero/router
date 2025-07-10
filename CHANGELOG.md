@@ -1,4 +1,10 @@
 ---
+#### v4.7.9
+---
+
+Resolving issues with deepclone of instances not fit to clone.
+
+---
 #### v4.7.8
 ---
 
